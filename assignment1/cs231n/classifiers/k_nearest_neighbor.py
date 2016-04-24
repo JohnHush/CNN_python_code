@@ -119,7 +119,8 @@ class KNearestNeighbor(object):
     #       and two broadcast sums.                                         #
     #########################################################################
     X_reshape       = X.reshape( X.shape[0] , 1 , X.shape[1] )
-    X_train_reshape = self.X_train
+    X_train_reshape = self.X_train.reshape( 1 , self.X_train.shape[0] , self.X_train.shape[1])
+    dists = np.power(X_reshape - X_train_reshape , 2 ).sum(axis=2)
     #########################################################################
     #                         END OF YOUR CODE                              #
     #########################################################################
