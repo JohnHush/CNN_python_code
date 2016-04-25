@@ -118,9 +118,9 @@ class KNearestNeighbor(object):
     # HINT: Try to formulate the l2 distance using matrix multiplication    #
     #       and two broadcast sums.                                         #
     #########################################################################
-    X_reshape       = X.reshape( X.shape[0] , 1 , X.shape[1] )
-    X_train_reshape = self.X_train.reshape( 1 , self.X_train.shape[0] , self.X_train.shape[1])
-    dists = np.power(X_reshape - X_train_reshape , 2 ).sum(axis=2)
+    test_sum = np.power(X,2).sum(axis=1).reshape(num_test,1)
+    trai_sum = np.power(self.X_train,2).sum(axis=1)
+    dists    = test_sum + trai_sum - 2*X.dot(self.X_train.T)
     #########################################################################
     #                         END OF YOUR CODE                              #
     #########################################################################
