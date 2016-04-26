@@ -66,6 +66,7 @@ class TwoLayerNet(object):
     W1, b1 = self.params['W1'], self.params['b1']
     W2, b2 = self.params['W2'], self.params['b2']
     N, D = X.shape
+    H, C = W2.shape
 
     # Compute the forward pass
     scores = None
@@ -74,7 +75,10 @@ class TwoLayerNet(object):
     # Store the result in the scores variable, which should be an array of      #
     # shape (N, C).                                                             #
     #############################################################################
-    pass
+    HIDE1 = X.dot(W1) + b1.reshape(1,b1.shape[0])
+    RELU1_mask = (X.dot(W1) + b1.reshape(1,H)) > 0
+    RELU1 = RELU1_mask * HIDE1
+    scores= RELU1.dot(W2) + b2.reshape(1,C)
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -92,7 +96,12 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    pass
+    prob_scores = np.exp(scores - np.amax(scores, axis=1).reshape(N,1))
+    prob_scores = prob_scores / (np.sum(prob_scores, axis=1)).reshape(N,1)
+    loss = np.sum(-np.log(prob_scores[range(N), y]))
+    
+    loss /= N
+    loss += 0.5 * reg * (np.sum(W1*W1) + np.sum(W2*W2) )
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -104,7 +113,47 @@ class TwoLayerNet(object):
     # and biases. Store the results in the grads dictionary. For example,       #
     # grads['W1'] should store the gradient on W1, and be a matrix of same size #
     #############################################################################
-    pass
+
+    #############################################################################
+    # John Hush 
+    # derive the backward of the gradient
+    # 1.                dJ/dJ = 1
+    # 2.                dJ/d(z_outputlayer) = -(ground_truth - prob_scores)
+    #      Be careful that 'z_outputlayer' is the output directly from last 
+    #      hidden layer, before going to the exp() operand...IMPORTANT!!
+    # 3.                dJ/dW2 = (dJ/d(z_outputlayer)) * RELU1
+    #      dJ/d(z_outputlayer) is reshaped to size( N , 1 , C)
+    #      RELU1               is reshaped to size( N , H , 1)
+    # 4.                dJ/db2 = sum(dJ/d(z_outputlayer)) because the bias term
+    #      is always be 1.
+    # 5.   backwards propagate the derivates to RELU layer, 
+    #                   dJ/d(RELU_layer) = W2.T * (dJ/d(z_outputlayer))
+    #      RELU layer property, the derivative is transformed to values bigger
+    #      than 0
+    # 6.                dJ/d(HIDDEN_LAYER) = dJ/d(RELU_layer) if mask = True
+    #                                      = 0                if mask = False
+    # 7.                dJ/dW1 = dJ/d(HIDDEN) * input layer
+    #      dJ/d(HIDDEN) is reshaped to size( N , 1 , H)
+    #      input X      is reshaped to size( N , D , 1)
+    #############################################################################
+    ground_truth = np.zeros(scores.shape)
+    ground_truth[range(N),y] = 1
+
+    # dJ/d(z_outputlayer)
+    delta_out = - ( ground_truth - prob_scores )
+    # dJ/dW2   
+    dW2 = np.sum(RELU1.reshape(N,H,1) * delta_out.reshape(N,1,C) , axis=0 )
+    # dJ/d(RELU)
+    dRELU = delta_out.dot( W2.T )
+    # dJ/d(HIDEEN LAYER)
+    dHIDDEN = dRELU * RELU1_mask
+    # dJ/dW1
+    dW1 = np.sum(X.reshape(N,D,1)*dHIDDEN.reshape(N,1,H), axis=0)
+
+    grads['W1'] = dW1/N + reg * W1
+    grads['W2'] = dW2/N + reg * W2
+    grads['b1'] = np.sum(dHIDDEN   , axis=0)/N
+    grads['b2'] = np.sum(delta_out , axis=0)/N
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -148,7 +197,10 @@ class TwoLayerNet(object):
       # TODO: Create a random minibatch of training data and labels, storing  #
       # them in X_batch and y_batch respectively.                             #
       #########################################################################
-      pass
+
+      idxs = np.random.choice(num_train , batch_size)
+      X_batch = X[idxs]
+      y_batch = y[idxs]
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -163,7 +215,10 @@ class TwoLayerNet(object):
       # using stochastic gradient descent. You'll need to use the gradients   #
       # stored in the grads dictionary defined above.                         #
       #########################################################################
-      pass
+      self.params['W1'] -= learning_rate * grads['W1']
+      self.params['W2'] -= learning_rate * grads['W2']
+      self.params['b1'] -= learning_rate * grads['b1']
+      self.params['b2'] -= learning_rate * grads['b2']
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
@@ -208,7 +263,7 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
-    pass
+    y_pred = np.argmax( self.loss( X ) , axis=1) 
     ###########################################################################
     #                              END OF YOUR CODE                           #
     ###########################################################################
